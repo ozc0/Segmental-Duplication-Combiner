@@ -58,7 +58,6 @@ struct similar {
 };
 
 set < segment > all_segments, super_segments;
-map < segment, vector <segment> > close_segments;
 map < segment, set < segment > > group_members;
 map < segment, segment > grp;
 vector < pss > pairs;
@@ -113,10 +112,6 @@ vector < pss > read_tab();
 
 int strand_test = 0, debugint = 0;
 
-void compare ( segment seg1, segment seg2, int aft, int len ) {
-
-}
-
 segment current_grp ( segment cur ) {
   if ( grp[cur] == cur )
     return cur;
@@ -136,68 +131,23 @@ void find_groups () {
   }
 }
 
-void find_variations () {
-  
-  set < segment > :: iterator it, it2;
-  for ( it = all_segments.begin() ; it != all_segments.end() ; it++ ) {
-    it2 = it;
-    it2++;
-    for ( ; it2 != all_segments.end() ; it2++ ) {
-      if ( it2->chr.compare(it->chr) != 0 || (it2->beg) > (it->en) )
-	break;
-      int aft = (it2->beg) - (it->beg);
-      int lenn = min( it2->en, it->en ) - (it2->beg) + 1;
-      similar tmp;
-      tmp.seg1 = *it;
-      tmp.seg2 = *it2;
-      tmp.after_first = aft;
-      tmp.len = lenn;
-      similars.push_back ( tmp );
-    }
-  }
-}
-
-void find_suns () {
-
-  fprintf(stderr,"Before deleting any, sun size = %d\n",(int)suns.size());
-
+void print_dups () {
   for ( auto i: group_members ) {
-    set < segment > &cur_grp = i.second;
-    set < segment > :: iterator it, it2;
+  	set < segment > &cur_grp = i.second;
+  	set < segment > :: iterator it, it2;
 
-    for ( it = cur_grp.begin() ; it != cur_grp.end() ; it++ ) {
+  	for ( it = cur_grp.begin() ; it != cur_grp.end() ; it++ ) {
+  	  string tmp = "";
+      tmp = it.chr+":"+to_string(it.beg)+":"+to_string(it.en);
+      fprintf(save,"%s",tmp.c_str());
       it2 = it;
       it2++;
-      while ( it2 != cur_grp.end() ) {
-	compare ( *it, *it2, 0, min ( (it->en) - (it->beg) + 1, (it2->en) - (it2->beg) + 1 ) );
-	it2++;
-      }
-    }
+      if ( it2 == cur_grp.end() )
+      	fprintf(save,"\n");
+      else
+      	fprintf(save,"\t"); 
+  	}
   }
-
-  fprintf(stderr,"After deleting inter-groups, sun size = %d\n",(int)suns.size());
-
-  for ( int i = 0 ; i < similars.size () ; i++ ) {
-    similar &tmp = similars[i];
-
-    segment sup1 = current_grp (tmp.seg1), sup2 = current_grp (tmp.seg2);
-    set < segment > &grp1 = group_members[sup1];
-    set < segment > &grp2 = group_members[sup2];
-    set < segment > :: iterator it, it2;
-
-    for ( it = grp1.begin() ; it != grp1.end() ; it++ ) {
-      for ( it2 = grp2.begin() ; it2 != grp2.end() ; it2++ )
-	compare ( *it, *it2, tmp.after_first, tmp.len );
-    }
-
-  }
-
-  fprintf(stderr,"After deleting variations, sun size = %d\n",(int)suns.size());
-  fprintf(stderr,"fai_fetch uneven length count = %d\n",uneven_cnt);
-}
-
-void print_suns () {
-  
 }
 
 int main( int argc, char** argv ) {
@@ -212,18 +162,13 @@ int main( int argc, char** argv ) {
   find_groups();
   fprintf(stderr,"Found groups\n");
 
-  fprintf(stderr,"#3 Finding variations\n");
-  find_variations();
-  fprintf(stderr,"Found variations\n");
-
   save = fopen(files.output_file,"w");
 
-  fprintf(stderr,"#4 Finding suns\n");
-  find_suns ();
-
-  print_suns();
+  fprintf(stderr,"#3 Printing\n");
+  print_dups();
   
   fclose( save );
+  fprintf(stderr,"DONE.\n");
   return 0;
 }
 
